@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title>CryptoZombies front-end</title>
+    <script language="javascript" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <--<script language="javascript" type="text/javascript" src="web3.min.js"></script>-->
+	<script type="text/javascript" src="web3.js"></script>
+	<script type="text/javascript" src="ethjs.js"></script>  
+    <script language="javascript" type="text/javascript" src="cryptozombies_abi.js"></script>
+  </head>
+  <body>
+    <div id="txStatus"></div>
+    <div id="zombies"></div>
+
+    <script>
+	
+	// onload maybe not useful	
+	window.onload=function()
+	{
+		canv=document.getElementById("gc");
+		//ctx=canv.getContext("2d");
+		//document.addEventListener("keydown",keyPush);
+		//setInterval(game,1000/15);
+	}
+
+	var contractAddress = '0xe9e447bce2656d36150ab4df7e639da58212c6b8'; //last address v20180417
+	//var AccountaddressBackup = '0x7f985f5c5a21618b51d5e29b5886a1943617c702'
+	var el = function(id){ return document.querySelector(id); };
+	var myContract;
+	var web3js;
+	var ignoreMetamask = false;
+	
+	// var orig CZ	
+	var cryptoZombies;
+    var userAccount;
+	var Web3=require('web3'); 
+	//var web3 = new Web3('ws://10.244.5.43:8546');
+
+
+window.addEventListener('load', function()
+ {
+
+  // Checking if Web3 has been injected by the browser (Mist/MetaMask)
+  if (ignoreMetamask == false && typeof web3 !== 'undefined')
+	{
+    // Use Mist/MetaMask's provider
+		 console.log('Web3 Detected! ' + web3.currentProvider.constructor.name);
+    web3js = new Web3(web3.currentProvider);
+		ethlocal = new Eth(web3js.currentProvider);
+  	}
+	else
+	{
+    console.log('No web3? You should consider trying MetaMask!')
+		console.log("would have been nice to use ", web3.currentProvider);
+    // fallback - use your fallback strategy (local node / hosted node + in-dapp id mgmt / fail)
+    web3js = new Web3(new Web3.providers.HttpProvider("http://localhost:8545"));
+		ethlocal = new Eth(web3js.currentProvider);
+  }
+	
+  startApp()
+
+})
+     
+
+		
+		
+function GetAccountAddress()
+{
+	if (ignoreMetamask == true)
+	{
+		return AccountaddressBackup;
+	}
+	else
+	{
+		return web3.eth.accounts[0];
+	}
+}
+
+function startApp()
+{
+
+	var ethlocal = new Eth(web3js.currentProvider);
+	var contractAbi = ethlocal.contract(cryptoZombiesABI);
+	myContract = contractAbi.at(contractAddress);
+	//myContract.getPoints.call().then(function(a){a,console.log(a[0].words,a,a.toString(),+a.toString(),'Zombies!');});
+	var userAccount = GetAccountAddress();
+	//ShowNetwork();
+	//ShowGlobalScore();
+	//ShowLocalScore();
+	
+	myContract.events.Transfer(
+		{ filter: { _to: userAccount } })
+        .on("data", function(event) {
+          let data = event.returnValues;
+          getZombiesByOwner(userAccount).then(displayZombies);
+        }).on("error", console.error);
+	
+}
+
+function GetNetworkVersion()
+{
+	var network = web3.version.network;
+	console.log("Network ID is ", network);
+  switch (network)
+	{
+    case "1":
+      return '1 Ethereum mainnet';
+      break
+    case "2":
+        return '2 Ethereum  deprecated Morden test network.';
+      break
+    case "3":
+      return '3 Ethereum  ropsten test network.';
+      break
+    case "4":
+        return '4 Ethereum  Rinkeby test network.';
+      break
+    case "42":
+      return '42 Ethereum  Kovan test network.';
+      break
+		case "5777":
+			return '5777 Local Ethereum Ganache.';
+			break
+    default:
+      return 'Ethereum  unknown network.';
+			break;
+  }
+}
+
+
+		
+    //functions CZ
+	/*function startApp() {
+        
+	var cryptoZombiesAddress = "0xe9e447bce2656d36150ab4df7e639da58212c6b8"; //last address v20180417
+	
+	//zombieContract = web3js.eth.contract(cryptoZombiesABI);
+	//cryptoZombies = zombieContract.new({from:web3js.eth.accounts[0], data:cryptoZombiesAddress, gas:3000000});
+
+	
+        cryptoZombies = new web3js.eth.contract(cryptoZombiesABI, cryptoZombiesAddress);
+
+        var accountInterval = setInterval(function() {
+          // Check if account has changed
+          if (web3.eth.accounts[0] !== userAccount) {
+            userAccount = web3.eth.accounts[0];
+            // Call a function to update the UI with the new account
+            //getZombiesByOwner(userAccount)
+            //.then(displayZombies);
+          }
+        }, 100);
+
+        // Start here
+		if(typeof window.web3 !== "undefined" && typeof window.web3.currentProvider !== "undefined") {
+        var web3 = new Web3(window.web3.currentProvider);
+      	} else {
+        var web3 = new Web3(new Web3.providers.HttpProvider("https://mainnet.infura.io/MEDIUMTUTORIAL"));
+      	};
+		  
+        //var web3Infura = new web3(new Web3.providers.WebsocketProvider("wss://ropsten.infura.io/ws"));
+		//var web3Infura = new Web3(new Web3.providers.HttpProvider("http://ropsten.infura.io/"));
+        //var czEvents = new web3Infura.eth.Contract(cryptoZombiesABI, cryptoZombiesAddress);
+		
+		//---Modelo de go-ether
+		
+		var zombieCompiledABI = web3.eth.compile.solidity(cryptoZombiesABI);
+		var _greeting = "Hello World!"
+		var greeterContract = web3.eth.contract(greeterCompiled.greeter.info.abiDefinition);
+
+		  var greeter = greeterContract.new(_greeting,{from:web3.eth.accounts[0], data: greeterCompiled.greeter.code, gas: 1000000}, function(e, contract){
+  			if(!e) {
+
+				if(!contract.address) {
+				console.log("Contract transaction send: TransactionHash: " + contract.transactionHash + " waiting to be mined...");
+
+				} else {
+				console.log("Contract mined! Address: " + contract.address);
+				console.log(contract);
+				}
+
+  			}
+		  })
+		  
+		  
+		  
+		  
+		  
+		  var czEvents = new web3.eth.Contract(cryptoZombiesABI, cryptoZombiesAddress);
+        
+        czEvents.events.Transfer({ filter: { _to: userAccount } })
+        .on("data", function(event) {
+          let data = event.returnValues;
+          getZombiesByOwner(userAccount).then(displayZombies);
+        }).on("error", console.error);
+      }*/
+
+      function displayZombies(ids) {
+        $("#zombies").empty();
+        for (id of ids) {
+          // Look up zombie details from our contract. Returns a `zombie` object
+          getZombieDetails(id)
+          .then(function(zombie) {
+            // Using ES6's "template literals" to inject variables into the HTML.
+            // Append each one to our #zombies div
+            $("#zombies").append(`<div class="zombie">
+              <ul>
+                <li>Name: ${zombie.name}</li>
+                <li>DNA: ${zombie.dna}</li>
+                <li>Level: ${zombie.level}</li>
+                <li>Wins: ${zombie.winCount}</li>
+                <li>Losses: ${zombie.lossCount}</li>
+                <li>Ready Time: ${zombie.readyTime}</li>
+              </ul>
+            </div>`);
+          });
+        }
+      }
+
+      function createRandomZombie(name) {
+        // This is going to take a while, so update the UI to let the user know
+        // the transaction has been sent
+        $("#txStatus").text("Creating new zombie on the blockchain. This may take a while...");
+        // Send the tx to our contract:
+        return CryptoZombies.methods.createRandomZombie(name)
+        .send({ from: userAccount })
+        .on("receipt", function(receipt) {
+          $("#txStatus").text("Successfully created " + name + "!");
+          // Transaction was accepted into the blockchain, let's redraw the UI
+          getZombiesByOwner(userAccount).then(displayZombies);
+        })
+        .on("error", function(error) {
+          // Do something to alert the user their transaction has failed
+          $("#txStatus").text(error);
+        });
+      }
+
+      function feedOnKitty(zombieId, kittyId) {
+        $("#txStatus").text("Eating a kitty. This may take a while...");
+        return CryptoZombies.methods.feedOnKitty(zombieId, kittyId)
+        .send({ from: userAccount })
+        .on("receipt", function(receipt) {
+          $("#txStatus").text("Ate a kitty and spawned a new Zombie!");
+          getZombiesByOwner(userAccount).then(displayZombies);
+        })
+        .on("error", function(error) {
+          $("#txStatus").text(error);
+        });
+      }
+
+      function levelUp(zombieId) {
+        $("#txStatus").text("Leveling up your zombie...");
+        return CryptoZombies.methods.levelUp(zombieId)
+        .send({ from: userAccount, value: web3.utils.toWei("0.001", "ether") })
+        .on("receipt", function(receipt) {
+          $("#txStatus").text("Power overwhelming! Zombie successfully leveled up");
+        })
+        .on("error", function(error) {
+          $("#txStatus").text(error);
+        });
+      }
+
+      function getZombieDetails(id) {
+        return cryptoZombies.methods.zombies(id).call()
+      }
+
+      function zombieToOwner(id) {
+        return cryptoZombies.methods.zombieToOwner(id).call()
+      }
+
+      function getZombiesByOwner(userAccount) {
+        return cryptoZombies.methods.getZombiesByOwner(userAccount).call()
+      }
+
+    </script>
+  </body>
+</html>
